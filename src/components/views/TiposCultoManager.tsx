@@ -184,7 +184,7 @@ export const TiposCultoManager: React.FC<TiposCultoManagerProps> = ({ onClose, i
                 resetForm();
                 setShowForm(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 transition-all touch-active shadow-sm min-h-[42px]"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 transition-all touch-active shadow-sm min-h-[42px]"
             >
               <Plus className="w-4 h-4 text-amber-400" />
               <span>Novo Modelo</span>
@@ -370,7 +370,7 @@ export const TiposCultoManager: React.FC<TiposCultoManagerProps> = ({ onClose, i
             <button
               type="submit"
               disabled={isSaving}
-              className="px-5 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 flex items-center gap-2 touch-active min-h-[42px]"
+              className="px-5 py-2.5 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 flex items-center gap-2 touch-active min-h-[42px] shadow-xs"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
@@ -405,7 +405,7 @@ export const TiposCultoManager: React.FC<TiposCultoManagerProps> = ({ onClose, i
               resetForm();
               setShowForm(true);
             }}
-            className="px-4 py-2 bg-slate-900 dark:bg-slate-800 text-amber-400 text-xs font-bold rounded-xl border border-amber-400/30"
+            className="px-4 py-2 bg-black hover:bg-neutral-900 text-amber-400 text-xs font-bold rounded-xl border border-amber-400/30 shadow-xs"
           >
             Cadastrar Primeiro Modelo
           </button>

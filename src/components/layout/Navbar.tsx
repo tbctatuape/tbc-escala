@@ -36,22 +36,15 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab }) => {
       roles: ['admin', 'leader', 'volunteer'],
     },
     {
-      id: 'indisponibilidades' as NavTab,
-      label: 'Indisponibilidades',
-      shortLabel: 'Folgas',
-      icon: CalendarOff,
-      roles: ['admin', 'leader', 'volunteer'],
-    },
-    {
       id: 'voluntarios' as NavTab,
-      label: 'Voluntários & Funções',
+      label: 'Equipe',
       shortLabel: 'Equipe',
       icon: Users,
       roles: ['admin', 'leader'],
     },
     {
       id: 'configuracoes' as NavTab,
-      label: 'Configurações',
+      label: 'Ajustes',
       shortLabel: 'Ajustes',
       icon: Settings,
       roles: ['admin', 'leader'],
@@ -78,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab }) => {
                   onClick={() => onSelectTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all touch-active focus:outline-none focus:ring-2 focus:ring-amber-400/40 shrink-0 ${
                     isActive
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-amber-400 font-semibold border border-slate-200/90 dark:border-amber-400/25 shadow-xs'
+                      ? 'bg-white dark:bg-black text-slate-900 dark:text-amber-400 font-semibold border border-slate-200/90 dark:border-amber-400/25 shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
                   }`}
                 >

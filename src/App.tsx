@@ -4,12 +4,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { NavTab } from './types';
 import { Topbar } from './components/layout/Topbar';
 import { Navbar } from './components/layout/Navbar';
-import { PWAInstallBanner } from './components/pwa/PWAInstallBanner';
 import { LoginCard } from './components/auth/LoginCard';
 import { PasswordRecoveryCard } from './components/auth/PasswordRecoveryCard';
 import { InicioView } from './components/views/InicioView';
 import { EscalasView } from './components/views/EscalasView';
-import { IndisponibilidadesView } from './components/views/IndisponibilidadesView';
 import { VoluntariosView } from './components/views/VoluntariosView';
 import { ConfiguracoesView } from './components/views/ConfiguracoesView';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
@@ -33,7 +31,6 @@ const MainAppContent: React.FC = () => {
   if (status === 'unauthenticated') {
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col justify-between py-8 px-4 transition-colors">
-        <PWAInstallBanner />
         <main className="my-auto py-8">
           <LoginCard />
         </main>
@@ -47,7 +44,6 @@ const MainAppContent: React.FC = () => {
   if (status === 'recovery') {
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col justify-between py-8 px-4 transition-colors">
-        <PWAInstallBanner />
         <main className="my-auto py-8">
           <PasswordRecoveryCard />
         </main>
@@ -66,7 +62,6 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
-      <PWAInstallBanner />
       <Topbar />
       <Navbar activeTab={activeTab} onSelectTab={setActiveTab} />
 
@@ -85,7 +80,7 @@ const MainAppContent: React.FC = () => {
             </p>
             <button
               onClick={() => setActiveTab('escalas')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 shadow-xs"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Voltar para Minhas Escalas</span>
@@ -95,7 +90,7 @@ const MainAppContent: React.FC = () => {
           <>
             {activeTab === 'inicio' && <InicioView onNavigateToEscalas={() => setActiveTab('escalas')} />}
             {activeTab === 'escalas' && <EscalasView />}
-            {activeTab === 'indisponibilidades' && <IndisponibilidadesView />}
+            {activeTab === 'indisponibilidades' && <EscalasView initialSubTab="restricoes" />}
             {activeTab === 'voluntarios' && <VoluntariosView />}
             {activeTab === 'configuracoes' && <ConfiguracoesView />}
           </>

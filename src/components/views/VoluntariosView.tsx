@@ -61,10 +61,14 @@ export const VoluntariosView: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
-  // Filter states
+  // Filter states (default: 'active' as requested)
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [functionFilter, setFunctionFilter] = useState<string>('all');
+
+  // Filter states for Funções da Mídia
+  const [funcoesSearchQuery, setFuncoesSearchQuery] = useState('');
+  const [funcoesStatusFilter, setFuncoesStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
 
   // Modal / Bottom-Sheet states for Voluntário
   const [isVoluntarioModalOpen, setIsVoluntarioModalOpen] = useState(false);
@@ -324,6 +328,26 @@ export const VoluntariosView: React.FC = () => {
     return matchesSearch && matchesStatus && matchesFunction;
   });
 
+  // Filtered Funções da Mídia
+  const filteredFuncoes = funcoes.filter((func) => {
+    // 1. Text Search
+    const term = funcoesSearchQuery.toLowerCase().trim();
+    const nome = func.nome.toLowerCase();
+    const descricao = (func.descricao || '').toLowerCase();
+
+    const matchesSearch =
+      !term ||
+      nome.includes(term) ||
+      descricao.includes(term);
+
+    // 2. Status Filter
+    let matchesStatus = true;
+    if (funcoesStatusFilter === 'active') matchesStatus = func.ativa === true;
+    if (funcoesStatusFilter === 'inactive') matchesStatus = func.ativa === false;
+
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* HEADER BANNER */}
@@ -371,7 +395,7 @@ export const VoluntariosView: React.FC = () => {
           onClick={() => setActiveSubTab('voluntarios')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[44px] ${
             activeSubTab === 'voluntarios'
-              ? 'bg-slate-900 dark:bg-slate-800 text-amber-400 border border-amber-400/30 shadow-sm'
+              ? 'bg-black text-amber-400 border border-amber-400/30 shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
@@ -383,7 +407,7 @@ export const VoluntariosView: React.FC = () => {
           onClick={() => setActiveSubTab('funcoes')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[44px] ${
             activeSubTab === 'funcoes'
-              ? 'bg-slate-900 dark:bg-slate-800 text-amber-400 border border-amber-400/30 shadow-sm'
+              ? 'bg-black text-amber-400 border border-amber-400/30 shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
@@ -509,7 +533,7 @@ export const VoluntariosView: React.FC = () => {
               ) : isLeaderOrAdmin ? (
                 <button
                   onClick={handleOpenNewVoluntario}
-                  className="inline-flex items-center gap-2 px-5 py-3 bg-slate-900 dark:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30"
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 shadow-xs"
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Cadastrar Primeiro Voluntário</span>
@@ -682,7 +706,64 @@ export const VoluntariosView: React.FC = () => {
 
       {/* SUB-TAB 2: FUNÇÕES DA MÍDIA */}
       {activeSubTab === 'funcoes' && (
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* FILTER TOOLBAR - Identical to Voluntários */}
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={funcoesSearchQuery}
+                onChange={(e) => setFuncoesSearchQuery(e.target.value)}
+                placeholder="Buscar função por nome ou descrição..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[40px]"
+              />
+              {funcoesSearchQuery && (
+                <button
+                  onClick={() => setFuncoesSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Status Filter Pills */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
+              <button
+                onClick={() => setFuncoesStatusFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  funcoesStatusFilter === 'all'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setFuncoesStatusFilter('active')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  funcoesStatusFilter === 'active'
+                    ? 'bg-emerald-500 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                Ativos
+              </button>
+              <button
+                onClick={() => setFuncoesStatusFilter('inactive')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  funcoesStatusFilter === 'inactive'
+                    ? 'bg-slate-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                Desativados
+              </button>
+            </div>
+          </div>
+
           {loading ? (
             <div className="py-16 text-center">
               <Loader2 className="w-8 h-8 animate-spin text-amber-400 mx-auto mb-3" />
@@ -702,11 +783,30 @@ export const VoluntariosView: React.FC = () => {
               {isLeaderOrAdmin && (
                 <button
                   onClick={handleOpenNewFuncao}
-                  className="px-4 py-2.5 bg-slate-900 dark:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30"
+                  className="px-4 py-2.5 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 shadow-xs"
                 >
                   Criar Primeira Função
                 </button>
               )}
+            </div>
+          ) : filteredFuncoes.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 text-center shadow-sm max-w-md mx-auto my-6">
+              <Sliders className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+              <h3 className="font-bold text-slate-900 dark:text-white text-base mb-1">
+                Nenhuma função encontrada com estes filtros
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                Tente ajustar sua busca por nome ou alterar o filtro de status.
+              </p>
+              <button
+                onClick={() => {
+                  setFuncoesSearchQuery('');
+                  setFuncoesStatusFilter('all');
+                }}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs rounded-xl hover:bg-slate-200"
+              >
+                Limpar Filtros (Ver Todas)
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs bg-white dark:bg-slate-900">
@@ -721,7 +821,7 @@ export const VoluntariosView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                  {funcoes.map((func) => (
+                  {filteredFuncoes.map((func) => (
                     <tr
                       key={func.id}
                       className={`transition-colors ${
@@ -801,7 +901,7 @@ export const VoluntariosView: React.FC = () => {
           {/* Container: Bottom Sheet on Mobile, Centered Modal on Desktop */}
           <div className="bg-white dark:bg-slate-900 w-full sm:max-w-xl rounded-t-[32px] sm:rounded-3xl border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800 shrink-0">
+            <div className="bg-black text-white px-6 py-4 flex items-center justify-between border-b border-neutral-800 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-400/10 text-amber-400 flex items-center justify-center font-bold">
                   <UserPlus className="w-5 h-5" />
@@ -982,7 +1082,7 @@ export const VoluntariosView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-amber-400 font-bold text-xs sm:text-sm rounded-xl border border-amber-400/30 min-h-[44px]"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs sm:text-sm rounded-xl border border-amber-400/30 min-h-[44px] shadow-xs"
                 >
                   {actionLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
@@ -1000,7 +1100,7 @@ export const VoluntariosView: React.FC = () => {
       {isFuncaoModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-[32px] sm:rounded-3xl border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
+            <div className="bg-black text-white px-6 py-4 flex items-center justify-between border-b border-neutral-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-400/10 text-amber-400 flex items-center justify-center font-bold">
                   <Sliders className="w-5 h-5" />
@@ -1103,7 +1203,7 @@ export const VoluntariosView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-slate-800 text-amber-400 font-bold text-xs sm:text-sm rounded-xl border border-amber-400/30 hover:bg-slate-800 min-h-[44px]"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs sm:text-sm rounded-xl border border-amber-400/30 min-h-[44px] shadow-xs"
                 >
                   {actionLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-amber-400" />

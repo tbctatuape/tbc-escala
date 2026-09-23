@@ -17,6 +17,7 @@ import {
   AlertCircle,
   UserCheck
 } from 'lucide-react';
+import { PWAInstallCard } from '../pwa/PWAInstallCard';
 
 interface InicioViewProps {
   onNavigateToEscalas: () => void;
@@ -235,6 +236,9 @@ export const InicioView: React.FC<InicioViewProps> = ({ onNavigateToEscalas }) =
         </div>
       )}
 
+      {/* PWA INSTALL NOTIFICATION & TUTORIALS */}
+      <PWAInstallCard />
+
       {/* MINIMALIST 2x2 METRIC CARDS LADO A LADO */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
         <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
@@ -326,7 +330,7 @@ export const InicioView: React.FC<InicioViewProps> = ({ onNavigateToEscalas }) =
           </div>
           <button
             onClick={onNavigateToEscalas}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 transition-all touch-active min-h-[44px]"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 transition-all touch-active min-h-[44px] shadow-xs"
           >
             <span>Ver Programação de Cultos</span>
             <ArrowRight className="w-4 h-4" />
@@ -385,7 +389,7 @@ export const InicioView: React.FC<InicioViewProps> = ({ onNavigateToEscalas }) =
                     <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
                       Sua Função
                     </span>
-                    <span className="px-3 py-1 rounded-xl bg-slate-900 dark:bg-slate-800 text-amber-400 border border-amber-400/30 text-xs font-bold inline-block">
+                    <span className="px-3 py-1 rounded-xl bg-black text-amber-400 border border-amber-400/30 text-xs font-bold inline-block shadow-xs">
                       {myAssignedItem.funcao_nome}
                     </span>
                   </div>
@@ -510,7 +514,7 @@ export const InicioView: React.FC<InicioViewProps> = ({ onNavigateToEscalas }) =
       {recusalTarget && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-[32px] sm:rounded-3xl border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
+            <div className="bg-black text-white px-6 py-4 flex items-center justify-between border-b border-neutral-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center font-bold">
                   <XCircle className="w-5 h-5" />

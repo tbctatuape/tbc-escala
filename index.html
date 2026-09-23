@@ -17,12 +17,13 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Theme Initializer (prevents color flash on load) -->
+    <!-- Theme Initializer (prevents color flash on load, defaults to light mode) -->
     <script>
       (function() {
         try {
           var saved = localStorage.getItem('tbc_escala_theme_preference');
-          var isDark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          // Default to light mode (only dark if explicitly selected)
+          var isDark = saved === 'dark';
           if (isDark) {
             document.documentElement.classList.add('dark');
           } else {
@@ -33,9 +34,11 @@
     </script>
 
     <!-- Icons -->
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
-    <link rel="icon" type="image/svg+xml" href="/pwa-icon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

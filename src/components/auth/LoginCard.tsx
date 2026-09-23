@@ -109,7 +109,7 @@ export const LoginCard: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleToggleForgotPassword}
-                    className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 dark:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30"
+                    className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 shadow-xs"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>Voltar para o Login</span>

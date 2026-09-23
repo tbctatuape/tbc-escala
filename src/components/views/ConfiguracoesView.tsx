@@ -641,7 +641,7 @@ export const ConfiguracoesView: React.FC = () => {
 
           <button
             onClick={toggleTheme}
-            className="px-4 py-2 bg-slate-900 dark:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 flex items-center gap-2 touch-active min-h-[44px]"
+            className="px-4 py-2 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs rounded-xl border border-amber-400/30 flex items-center gap-2 touch-active min-h-[44px] shadow-xs"
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}</span>
@@ -739,7 +739,7 @@ export const ConfiguracoesView: React.FC = () => {
               <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-amber-400 font-bold text-xs sm:text-sm rounded-xl border border-amber-400/30 transition-all touch-active shadow-xs min-h-[44px]"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-neutral-900 text-amber-400 font-bold text-xs sm:text-sm rounded-xl border border-amber-400/30 transition-all touch-active shadow-xs min-h-[44px]"
                 >
                   <Save className="w-4 h-4 text-amber-400" />
                   <span>Salvar Conexão</span>

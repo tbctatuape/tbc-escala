@@ -43,10 +43,44 @@ export const escalaService = {
 
       // 2. Fetch Escala Itens joined with funcoes & voluntarios
       const cultoIds = cultosData.map((c: any) => c.id);
-      const { data: itensData, error: itensErr } = await supabase
+      let itensData: any[] = [];
+
+      // Try fetching via culto_id first
+      const directRes = await supabase
         .from('escala_itens')
         .select('*, funcoes(id, nome, cor), voluntarios(id, nome, sobrenome)')
         .in('culto_id', cultoIds);
+
+      if (!directRes.error && directRes.data) {
+        itensData = directRes.data;
+      } else {
+        // Query via escalas table (where escala_itens.escala_id = escalas.id)
+        const { data: escalasData } = await supabase
+          .from('escalas')
+          .select('id, culto_id')
+          .in('culto_id', cultoIds);
+
+        if (escalasData && escalasData.length > 0) {
+          const escalaMap: Record<string, string> = {};
+          const escalaIds: string[] = [];
+          escalasData.forEach((esc: any) => {
+            escalaMap[esc.id] = esc.culto_id;
+            escalaIds.push(esc.id);
+          });
+
+          const { data: itensByEscala } = await supabase
+            .from('escala_itens')
+            .select('*, funcoes(id, nome, cor), voluntarios(id, nome, sobrenome)')
+            .in('escala_id', escalaIds);
+
+          if (itensByEscala) {
+            itensData = itensByEscala.map((item: any) => ({
+              ...item,
+              culto_id: escalaMap[item.escala_id] || item.culto_id,
+            }));
+          }
+        }
+      }
 
       const itemsMap: Record<string, EscalaItemRecord[]> = {};
 
@@ -83,7 +117,7 @@ export const escalaService = {
           data: c.data,
           horario: c.horario,
           periodo: c.periodo || 'manha',
-          observacao: c.observacao || '',
+          observacao: c.observacoes || c.observacao || '',
           created_at: c.created_at,
         },
         escala_itens: itemsMap[c.id] || [],
@@ -106,30 +140,71 @@ export const escalaService = {
     if (!supabase) return { data: null, error: 'Supabase não configurado' };
 
     try {
-      const { data, error } = await supabase
+      // 1. Insert into cultos (try observacoes first, fallback to observacao)
+      let data: any = null;
+      const initialInsert = await supabase
         .from('cultos')
         .insert({
           titulo: cultoData.titulo,
           data: cultoData.data,
           horario: cultoData.horario,
           periodo: cultoData.periodo || 'manha',
-          observacao: cultoData.observacao || '',
+          observacoes: cultoData.observacao || '',
         })
         .select()
         .single();
 
-      if (error) return { data: null, error: error.message };
+      if (initialInsert.error) {
+        const retry = await supabase
+          .from('cultos')
+          .insert({
+            titulo: cultoData.titulo,
+            data: cultoData.data,
+            horario: cultoData.horario,
+            periodo: cultoData.periodo || 'manha',
+            observacao: cultoData.observacao || '',
+          })
+          .select()
+          .single();
 
-      // Initialize empty slots for all active functions
+        if (retry.error) return { data: null, error: retry.error.message };
+        data = retry.data;
+      } else {
+        data = initialInsert.data;
+      }
+
+      // 2. Ensure an associated row in 'escalas' exists
+      let escalaId: string | null = null;
+      try {
+        const { data: escalaData } = await supabase
+          .from('escalas')
+          .insert({ culto_id: data.id, status: 'publicada' })
+          .select('id')
+          .maybeSingle();
+        if (escalaData) escalaId = escalaData.id;
+      } catch (e) {
+        // Escalas table might be optional or handled by trigger
+      }
+
+      // 3. Initialize empty slots for all active functions
       if (activeFuncoes && activeFuncoes.length > 0) {
         const defaultSlots = activeFuncoes.map((fn) => ({
           culto_id: data.id,
+          escala_id: escalaId || data.id,
           funcao_id: fn.id,
           voluntario_id: null,
           status: 'pendente',
+          status_confirmacao: 'pendente',
         }));
 
-        await supabase.from('escala_itens').insert(defaultSlots);
+        const slotRes = await supabase.from('escala_itens').insert(defaultSlots);
+        if (slotRes.error && slotRes.error.message.includes('culto_id') && escalaId) {
+          const fallback = defaultSlots.map(({ culto_id, ...rest }) => rest);
+          await supabase.from('escala_itens').insert(fallback);
+        } else if (slotRes.error && slotRes.error.message.includes('escala_id')) {
+          const fallback = defaultSlots.map(({ escala_id, ...rest }) => rest);
+          await supabase.from('escala_itens').insert(fallback);
+        }
       }
 
       return {
@@ -139,7 +214,7 @@ export const escalaService = {
           data: data.data,
           horario: data.horario,
           periodo: data.periodo,
-          observacao: data.observacao,
+          observacao: data.observacoes || data.observacao || '',
         },
         error: null,
       };
@@ -154,7 +229,8 @@ export const escalaService = {
   async createCultosDoMes(
     year: number,
     month: number, // 1 - 12
-    activeFuncoes: FuncaoRecord[] = []
+    activeFuncoes: FuncaoRecord[] = [],
+    selectedTipoCultoIds?: string[]
   ): Promise<{ count: number; error: string | null }> {
     const supabase = getSupabaseClient();
     if (!supabase) return { count: 0, error: 'Supabase não configurado' };
@@ -164,8 +240,16 @@ export const escalaService = {
       const { data: modelos } = await tipoCultoService.getTiposCulto();
       let activeModelos = (modelos || []).filter((m) => m.ativo !== false);
 
-      // If no models exist in Supabase yet, insert default models
-      if (activeModelos.length === 0) {
+      // Filter by selectedTipoCultoIds if provided
+      if (selectedTipoCultoIds !== undefined) {
+        if (selectedTipoCultoIds.length === 0) {
+          return { count: 0, error: 'Nenhum tipo de culto selecionado.' };
+        }
+        activeModelos = activeModelos.filter((m) => selectedTipoCultoIds.includes(m.id));
+      }
+
+      // If no models exist in Supabase yet and no filter was applied, insert default models
+      if (activeModelos.length === 0 && selectedTipoCultoIds === undefined) {
         const defaultTemplates = [
           { nome: 'Culto de Domingo - Manhã', dia_semana: 0, semana_mes: null, meses_intervalo: 1, horario: '09:00', periodo: 'Manhã', ativo: true },
           { nome: 'Culto de Domingo - Noite', dia_semana: 0, semana_mes: null, meses_intervalo: 1, horario: '18:00', periodo: 'Noite', ativo: true },
@@ -309,15 +393,49 @@ export const escalaService = {
     if (!supabase) return { success: false, error: 'Supabase não configurado' };
 
     try {
-      // Check if item already exists for this culto + funcao
-      const { data: existing } = await supabase
-        .from('escala_itens')
+      // Ensure escala row exists
+      let escalaId: string | null = null;
+      const { data: existingEscala } = await supabase
+        .from('escalas')
         .select('id')
         .eq('culto_id', cultoId)
-        .eq('funcao_id', funcaoId)
         .maybeSingle();
 
-      if (existing) {
+      if (existingEscala) {
+        escalaId = existingEscala.id;
+      } else {
+        const { data: newEscala } = await supabase
+          .from('escalas')
+          .insert({ culto_id: cultoId, status: 'publicada' })
+          .select('id')
+          .maybeSingle();
+        if (newEscala) escalaId = newEscala.id;
+      }
+
+      // Check if item already exists via escala_id or culto_id
+      let existingId: string | null = null;
+
+      if (escalaId) {
+        const { data: itemByEscala } = await supabase
+          .from('escala_itens')
+          .select('id')
+          .eq('escala_id', escalaId)
+          .eq('funcao_id', funcaoId)
+          .maybeSingle();
+        if (itemByEscala) existingId = itemByEscala.id;
+      }
+
+      if (!existingId) {
+        const { data: itemByCulto } = await supabase
+          .from('escala_itens')
+          .select('id')
+          .eq('culto_id', cultoId)
+          .eq('funcao_id', funcaoId)
+          .maybeSingle();
+        if (itemByCulto) existingId = itemByCulto.id;
+      }
+
+      if (existingId) {
         const { error } = await supabase
           .from('escala_itens')
           .update({
@@ -326,20 +444,28 @@ export const escalaService = {
             status: 'pendente',
             motivo_recusa: null,
           })
-          .eq('id', existing.id);
+          .eq('id', existingId);
 
         if (error) return { success: false, error: error.message };
       } else {
-        const { error } = await supabase.from('escala_itens').insert({
-          culto_id: cultoId,
+        const insertItem: any = {
           funcao_id: funcaoId,
           voluntario_id: voluntarioId,
           status_confirmacao: 'pendente',
           status: 'pendente',
           motivo_recusa: null,
-        });
+        };
+        if (escalaId) insertItem.escala_id = escalaId;
+        insertItem.culto_id = cultoId;
 
-        if (error) return { success: false, error: error.message };
+        const res = await supabase.from('escala_itens').insert(insertItem);
+        if (res.error && res.error.message.includes('culto_id') && escalaId) {
+          delete insertItem.culto_id;
+          const retry = await supabase.from('escala_itens').insert(insertItem);
+          if (retry.error) return { success: false, error: retry.error.message };
+        } else if (res.error) {
+          return { success: false, error: res.error.message };
+        }
       }
 
       return { success: true, error: null };
@@ -405,7 +531,8 @@ export const escalaService = {
   },
 
   /**
-   * Auto-suggest algorithm for scale generation
+   * Auto-suggest algorithm for scale generation.
+   * Rule: On Sundays with two services (e.g. morning & evening), the team must be identical.
    */
   sugerirEscalaAutomatica(
     culto: CultoRecord,
@@ -417,7 +544,43 @@ export const escalaService = {
   ): Record<string, string | null> {
     const updatedAssignments: Record<string, string | null> = {};
 
-    // 1. Map monthly assignment counts per volunteer to balance workload
+    // 1. Detect if this service is on a Sunday
+    const dateParts = (culto.data || '').split('-');
+    let isSunday = false;
+    if (dateParts.length === 3) {
+      const dObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+      isSunday = dObj.getDay() === 0;
+    }
+    if (!isSunday && (culto.titulo || '').toLowerCase().includes('domingo')) {
+      isSunday = true;
+    }
+
+    // Find sister service on the same date (e.g. morning/night pair on Sunday)
+    const sisterService = todasEscalasMes.find(
+      (c) => c.culto.data === culto.data && c.culto.id !== culto.id
+    );
+
+    // Rule: Sunday morning and night share the same team.
+    // If sister service already has volunteers assigned, replicate them directly!
+    if (sisterService) {
+      const sisterHasAssignedVolunteers = sisterService.escala_itens.some((it) => Boolean(it.voluntario_id));
+      if (sisterHasAssignedVolunteers) {
+        funcoes.forEach((fn) => {
+          const sisterItem = sisterService.escala_itens.find(
+            (it) => it.funcao_id === fn.id && Boolean(it.voluntario_id)
+          );
+          if (sisterItem && sisterItem.voluntario_id) {
+            updatedAssignments[fn.id] = sisterItem.voluntario_id;
+          } else {
+            const existing = currentItens.find((it) => it.funcao_id === fn.id);
+            updatedAssignments[fn.id] = existing ? existing.voluntario_id : null;
+          }
+        });
+        return updatedAssignments;
+      }
+    }
+
+    // 2. Map monthly assignment counts per volunteer to balance workload
     const monthlyAssignmentCounts: Record<string, number> = {};
     voluntarios.forEach((v) => {
       monthlyAssignmentCounts[v.id] = 0;
@@ -441,7 +604,7 @@ export const escalaService = {
       }
     });
 
-    // 2. Iterate through each function slot
+    // 3. Iterate through each function slot
     funcoes.forEach((fn) => {
       // If already filled, skip
       if (updatedAssignments[fn.id]) return;
@@ -457,12 +620,15 @@ export const escalaService = {
         // Must not be already assigned in this service
         if (assignedInThisService.has(vol.id)) return false;
 
-        // Check unavailability conflict
+        // Check unavailability conflict:
+        // IMPORTANT: If Sunday with a sister service, volunteer must be available for BOTH services on that day!
         const isUnavailable = indisponibilidades.some((ind) => {
           if (ind.voluntario_id !== vol.id) return false;
           // Check date overlap
           const dateMatch = culto.data >= ind.data_inicio && culto.data <= ind.data_fim;
           if (!dateMatch) return false;
+          // If Sunday with twin services, any unavailability on this date disqualifies them
+          if (isSunday && sisterService) return true;
           // Check period overlap
           if (ind.periodo === 'dia_inteiro') return true;
           return ind.periodo === culto.periodo;
@@ -490,6 +656,148 @@ export const escalaService = {
     });
 
     return updatedAssignments;
+  },
+
+  /**
+   * Automatically generate and populate schedules for all services in a given month,
+   * enforcing the rule that Sunday morning and night services share the exact same team.
+   */
+  async gerarEscalaAutomaticaMes(
+    cultosComEscala: CultoComEscala[],
+    year: number,
+    month: number,
+    funcoes: FuncaoRecord[],
+    voluntarios: VoluntarioRecord[],
+    indisponibilidades: IndisponibilidadeRecord[]
+  ): Promise<{ updatedCount: number; error: string | null }> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return { updatedCount: 0, error: 'Supabase não configurado' };
+
+    try {
+      const prefix = `${year}-${String(month).padStart(2, '0')}`;
+      const cultosMes = cultosComEscala
+        .filter((c) => c.culto.data.startsWith(prefix))
+        .sort((a, b) => {
+          const cmp = a.culto.data.localeCompare(b.culto.data);
+          if (cmp !== 0) return cmp;
+          return (a.culto.horario || '').localeCompare(b.culto.horario || '');
+        });
+
+      if (cultosMes.length === 0) {
+        return { updatedCount: 0, error: 'Nenhum culto encontrado neste mês para escalar.' };
+      }
+
+      const activeFuncoes = funcoes.filter((f) => f.ativa);
+      let totalUpdated = 0;
+
+      // Group cultos by date
+      const byDate: Record<string, CultoComEscala[]> = {};
+      cultosMes.forEach((c) => {
+        if (!byDate[c.culto.data]) byDate[c.culto.data] = [];
+        byDate[c.culto.data].push(c);
+      });
+
+      // Track running state of cultos in the month
+      const runningCultos: CultoComEscala[] = JSON.parse(JSON.stringify(cultosComEscala));
+
+      for (const dateKey of Object.keys(byDate)) {
+        const cultosDoDia = byDate[dateKey];
+        const dateObj = new Date(dateKey + 'T12:00:00');
+        const isSunday = dateObj.getDay() === 0;
+
+        if (isSunday && cultosDoDia.length >= 2) {
+          // Identify morning and evening
+          const manhaCulto =
+            cultosDoDia.find((c) => c.culto.periodo === 'manha') || cultosDoDia[0];
+          const noiteCulto =
+            cultosDoDia.find((c) => c.culto.id !== manhaCulto.culto.id) || cultosDoDia[1];
+
+          // 1. Generate for Sunday morning (ensuring candidates are available all Sunday)
+          const suggestedManha = this.sugerirEscalaAutomatica(
+            manhaCulto.culto,
+            activeFuncoes,
+            voluntarios,
+            indisponibilidades,
+            manhaCulto.escala_itens,
+            runningCultos
+          );
+
+          // Save morning
+          for (const fn of activeFuncoes) {
+            const volId = suggestedManha[fn.id] || null;
+            await this.saveEscalaItem(manhaCulto.culto.id, fn.id, volId);
+          }
+          totalUpdated++;
+
+          // Update running cultos with morning assignments
+          const runningManha = runningCultos.find((c) => c.culto.id === manhaCulto.culto.id);
+          if (runningManha) {
+            runningManha.escala_itens = activeFuncoes.map((fn) => ({
+              id: '',
+              culto_id: manhaCulto.culto.id,
+              funcao_id: fn.id,
+              funcao_nome: fn.nome,
+              voluntario_id: suggestedManha[fn.id] || null,
+              status_confirmacao: 'pendente',
+            }));
+          }
+
+          // 2. Assign EXACT SAME team to Sunday night!
+          for (const fn of activeFuncoes) {
+            const volId = suggestedManha[fn.id] || null;
+            await this.saveEscalaItem(noiteCulto.culto.id, fn.id, volId);
+          }
+          totalUpdated++;
+
+          // Update running cultos with night assignments
+          const runningNoite = runningCultos.find((c) => c.culto.id === noiteCulto.culto.id);
+          if (runningNoite) {
+            runningNoite.escala_itens = activeFuncoes.map((fn) => ({
+              id: '',
+              culto_id: noiteCulto.culto.id,
+              funcao_id: fn.id,
+              funcao_nome: fn.nome,
+              voluntario_id: suggestedManha[fn.id] || null,
+              status_confirmacao: 'pendente',
+            }));
+          }
+        } else {
+          // Single service on this day
+          for (const c of cultosDoDia) {
+            const suggested = this.sugerirEscalaAutomatica(
+              c.culto,
+              activeFuncoes,
+              voluntarios,
+              indisponibilidades,
+              c.escala_itens,
+              runningCultos
+            );
+
+            for (const fn of activeFuncoes) {
+              const volId = suggested[fn.id] || null;
+              await this.saveEscalaItem(c.culto.id, fn.id, volId);
+            }
+            totalUpdated++;
+
+            const runningC = runningCultos.find((rc) => rc.culto.id === c.culto.id);
+            if (runningC) {
+              runningC.escala_itens = activeFuncoes.map((fn) => ({
+                id: '',
+                culto_id: c.culto.id,
+                funcao_id: fn.id,
+                funcao_nome: fn.nome,
+                voluntario_id: suggested[fn.id] || null,
+                status_confirmacao: 'pendente',
+              }));
+            }
+          }
+        }
+      }
+
+      return { updatedCount: totalUpdated, error: null };
+    } catch (err: any) {
+      return { updatedCount: 0, error: err.message };
+    }
   },
 
   /**

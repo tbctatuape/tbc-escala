@@ -14,13 +14,10 @@ const THEME_STORAGE_KEY = 'tbc_escala_theme_preference';
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-    if (saved === 'light' || saved === 'dark') {
+    if (saved === 'dark' || saved === 'light') {
       return saved;
     }
-    // Check system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
+    // Default to light mode as requested
     return 'light';
   });
 
