@@ -170,13 +170,17 @@ BEGIN
   -- 3. Insere no sistema de autenticação (Auth)
   INSERT INTO auth.users (
     instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, recovery_token, email_change_token_new,
+    email_change, email_change_token_current, phone_change,
+    phone_change_token, reauthentication_token
   ) VALUES (
     '00000000-0000-0000-0000-000000000000', v_new_user_id, 'authenticated', 'authenticated', p_email,
     extensions.crypt(p_password, extensions.gen_salt('bf')), NOW(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     jsonb_build_object('nome', p_nome, 'sobrenome', p_sobrenome, 'nivel_acesso', p_nivel_acesso),
-    NOW(), NOW()
+    NOW(), NOW(),
+    '', '', '', '', '', '', '', ''
   );
   
   -- 4. Cria a identidade de login
