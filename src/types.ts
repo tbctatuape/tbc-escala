@@ -88,7 +88,7 @@ export interface VoluntarioRecord {
   id: string;
   nome: string;
   sobrenome: string;
-  email: string;
+  email?: string;
   celular: string;
   ativo: boolean;
   user_id: string | null; // references public.perfis(id) or auth.users(id)

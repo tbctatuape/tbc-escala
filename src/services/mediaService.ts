@@ -274,7 +274,7 @@ export const mediaService = {
           .update({
             nome: voluntario.nome,
             sobrenome: voluntario.sobrenome || '',
-            email: voluntario.email,
+            email: voluntario.email ? voluntario.email.trim() : null,
             celular: voluntario.celular || '',
             ativo: voluntario.ativo ?? true,
             user_id: voluntario.user_id || null,
@@ -289,7 +289,7 @@ export const mediaService = {
           .insert({
             nome: voluntario.nome,
             sobrenome: voluntario.sobrenome || '',
-            email: voluntario.email,
+            email: voluntario.email ? voluntario.email.trim() : null,
             celular: voluntario.celular || '',
             ativo: voluntario.ativo ?? true,
             user_id: voluntario.user_id || null,
