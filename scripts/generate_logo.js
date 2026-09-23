@@ -1,0 +1,67 @@
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
+
+const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <path id="textPath" d="M 256, 50 A 206,206 0 1,1 255.9,50" fill="none"/>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" fill="#000000" />
+
+  <!-- Outer Ring Text -->
+  <text fill="#ffffff" font-family="'Montserrat', 'Arial Black', sans-serif" font-weight="800" font-size="25" letter-spacing="3.5">
+    <textPath href="#textPath" startOffset="0%">.TABERNÁCULO O BRASIL PARA CRISTO . TBC</textPath>
+  </text>
+
+  <!-- Center Symbol -->
+  <g transform="translate(0, 0)">
+    <!-- Top White Bar -->
+    <rect x="160" y="174" width="192" height="52" fill="#ffffff" />
+
+    <!-- Center White Triangle (Tent) -->
+    <polygon points="256,182 208,338 304,338" fill="#ffffff" />
+
+    <!-- Left White Pillar -->
+    <rect x="160" y="238" width="36" height="100" fill="#ffffff" />
+
+    <!-- Right White Pillar -->
+    <rect x="316" y="238" width="36" height="100" fill="#ffffff" />
+
+    <!-- Black Gaps / Channels -->
+    <!-- Gap between Top Bar and Center Triangle -->
+    <polygon points="256,170 150,236 150,248 256,182 362,248 362,236" fill="#000000" />
+
+    <!-- Gap between Center Triangle and Pillars -->
+    <polygon points="208,238 208,338 196,338 196,238" fill="#000000" stroke="#000000" stroke-width="2" />
+    <polygon points="304,238 304,338 316,338 316,238" fill="#000000" stroke="#000000" stroke-width="2" />
+  </g>
+</svg>`;
+
+async function generate() {
+  const publicDir = path.resolve('public');
+
+  // Save SVG
+  fs.writeFileSync(path.join(publicDir, 'tbc-logo.svg'), svgContent);
+  fs.writeFileSync(path.join(publicDir, 'pwa-icon.svg'), svgContent);
+
+  // Generate PNGs using Sharp
+  const sizes = [
+    { name: 'tbc-logo.png', size: 512 },
+    { name: 'logo192.png', size: 192 },
+    { name: 'pwa-192x192.png', size: 192 },
+    { name: 'pwa-512x512.png', size: 512 },
+    { name: 'pwa-maskable-512x512.png', size: 512 },
+    { name: 'apple-touch-icon.png', size: 180 },
+  ];
+
+  for (const item of sizes) {
+    await sharp(Buffer.from(svgContent))
+      .resize(item.size, item.size)
+      .png()
+      .toFile(path.join(publicDir, item.name));
+    console.log(`Generated ${item.name} (${item.size}x${item.size})`);
+  }
+}
+
+generate().catch(console.error);
